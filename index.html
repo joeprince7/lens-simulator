@@ -110,10 +110,26 @@
   .legend span{display:flex;align-items:center;gap:6px;}
   .sw{width:16px;height:2px;display:inline-block;}
   .lensToggle{
-    display:flex;
+    display:grid;
+    grid-template-columns:auto 1fr 2px 1fr;
     align-items:center;
-    gap:8px;
-    margin-bottom:10px;
+    gap:10px 8px;
+    column-gap:14px;
+    margin-bottom:16px;
+  }
+  .lensToggle .divider{
+    grid-column:3;
+    grid-row:1 / span 3;
+    align-self:stretch;
+    border-left:2px dashed var(--dim);
+    opacity:0.7;
+  }
+  .lensToggle .colHead{
+    text-align:center;
+    color:var(--amber);
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:2px;
   }
   .lensToggle .groupLabel{
     color:var(--dim);
@@ -128,6 +144,13 @@
     padding:8px 18px;
     font-size:13px;
     cursor:pointer;
+  }
+  .lensToggle button .ex{
+    display:block;
+    font-size:11px;
+    font-weight:400;
+    opacity:0.8;
+    margin-top:3px;
   }
   .lensToggle button.active{
     background:var(--amber);
@@ -144,14 +167,16 @@
 <div class="sub">拖動下方滑桿改變物體位置，即時看到成像變化</div>
 
 <div class="lensToggle">
+  <span class="divider"></span>
+  <span></span>
+  <span class="colHead">複雜</span>
+  <span class="colHead">簡單</span>
   <span class="groupLabel">透鏡</span>
-  <button id="lensConvexBtn" class="active">凸透鏡（會聚）</button>
-  <button id="lensConcaveBtn">凹透鏡（發散）</button>
-</div>
-<div class="lensToggle" style="margin-bottom:16px;">
+  <button id="lensConvexBtn" class="active">凸透鏡（會聚）<small class="ex">例：放大鏡</small></button>
+  <button id="lensConcaveBtn">凹透鏡（發散）<small class="ex">例：近視眼鏡</small></button>
   <span class="groupLabel">面鏡</span>
-  <button id="mirrorConcaveBtn">凹面鏡（會聚）</button>
-  <button id="mirrorConvexBtn">凸面鏡（發散）</button>
+  <button id="mirrorConcaveBtn">凹面鏡（會聚）<small class="ex">例：化妝鏡</small></button>
+  <button id="mirrorConvexBtn">凸面鏡（發散）<small class="ex">例：巷口大反光鏡</small></button>
 </div>
 
 <div class="stage">
