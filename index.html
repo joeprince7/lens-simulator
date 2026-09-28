@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>透鏡成像模擬</title>
+<style>
+  :root{
+    --bg:#0e2a2a;
+    --panel:#123636;
+    --line:#2d5a5a;
+    --cream:#f2ead8;
+    --amber:#e3a75a;
+    --sky:#8fd0d6;
+    --coral:#d9705a;
+    --dim:#8fb3ae;
+    --green:#39ff8f;
+    --gray:#8a9a97;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--cream);
+    font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:28px 16px 40px;
+  }
+  h1{
+    font-size:20px;
+    font-weight:600;
+    letter-spacing:0.5px;
+    margin:0 0 4px;
+  }
+  .sub{
+    color:var(--dim);
+    font-size:13px;
+    margin-bottom:20px;
+  }
+  .stage{
+    background:var(--panel);
+    border-radius:10px;
+    padding:18px 22px 22px;
+    width:100%;
+    max-width:760px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  canvas{
+    display:block;
+    width:100%;
+    background:#0a2222;
+    border-radius:6px;
+  }
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-top:18px;
+  }
+  input[type=range]{
+    flex:1;
+    accent-color:var(--amber);
+  }
+  .doLabel{
+    font-family:"SF Mono",Menlo,monospace;
+    font-size:13px;
+    color:var(--amber);
+    min-width:96px;
+    text-align:right;
+  }
+  .readout{
+    display:flex;
+    justify-content:space-between;
+    margin-top:16px;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .card{
+    flex:1;
+    min-width:130px;
+    background:rgba(255,255,255,0.04);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+  }
+  .card .k{
+    font-size:11px;
+    color:var(--dim);
+    letter-spacing:0.3px;
+  }
+  .card .v{
+    font-family:"SF Mono",Menlo,monospace;
+    font-size:15px;
+    color:var(--cream);
+    margin-top:2px;
+  }
+  .card .v.real{color:var(--green);}
+  .card .v.virtual{color:var(--green);}
+  .legend{
+    display:flex;
+    gap:18px;
+    margin-top:14px;
+    font-size:12px;
+    color:var(--dim);
+  }
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .sw{width:16px;height:2px;display:inline-block;}
+  .lensToggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .lensToggle .groupLabel{
+    color:var(--dim);
+    font-size:12px;
+    width:38px;
+  }
+  .lensToggle button{
+    background:rgba(255,255,255,0.04);
+    border:1px solid var(--line);
+    color:var(--dim);
+    border-radius:8px;
+    padding:8px 18px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .lensToggle button.active{
+    background:var(--amber);
+    border-color:var(--amber);
+    color:#1a1204;
+    font-weight:600;
+  }
+</style>
+</head>
+<body>
+
+<h1>透鏡／面鏡成像模擬器</h1>
+<div class="sub">拖動下方滑桿改變物體位置，即時看到成像變化</div>
+
+<div class="lensToggle">
+  <span class="groupLabel">透鏡</span>
+  <button id="lensConvexBtn" class="active">凸透鏡（會聚）</button>
+  <button id="lensConcaveBtn">凹透鏡（發散）</button>
+</div>
+<div class="lensToggle" style="margin-bottom:16px;">
+  <span class="groupLabel">面鏡</span>
+  <button id="mirrorConcaveBtn">凹面鏡（會聚）</button>
+  <button id="mirrorConvexBtn">凸面鏡（發散）</button>
+</div>
+
+<div class="stage">
+  <canvas id="c" width="1400" height="560"></canvas>
+
+  <div class="controls">
+    <span style="font-size:12px;color:var(--dim);">物距</span>
+    <input id="slider" type="range" min="0" max="1000" value="580">
+    <span style="font-size:12px;color:var(--dim);">→ 極遠</span>
+    <span class="doLabel" id="doLabel">do = 2.50f</span>
+  </div>
+
+  <div class="controls">
+    <span style="font-size:12px;color:var(--dim);">畫面縮放</span>
+    <input id="zoomSlider" type="range" min="20" max="95" value="90">
+    <span style="font-size:12px;color:var(--dim);">縮小以容納更遠的物體</span>
+    <button id="infBtn" style="background:var(--line);color:var(--cream);border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">跳到極遠</button>
+    <button id="twoFBtn" style="background:var(--line);color:var(--cream);border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;white-space:nowrap;">移到 2f</button>
+  </div>
+
+  <div class="readout">
+    <div class="card">
+      <div class="k">物距 (do)</div>
+      <div class="v" id="doVal">2.50 f</div>
+    </div>
+    <div class="card">
+      <div class="k">像距 (di)</div>
+      <div class="v" id="diVal">1.67 f</div>
+    </div>
+    <div class="card">
+      <div class="k">成像性質</div>
+      <div class="v real" id="typeVal">實像・倒立・縮小</div>
+    </div>
+    <div class="card">
+      <div class="k">放大率 (m)</div>
+      <div class="v" id="mVal">0.67×</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--amber);"></i>主要光線（平行→焦點 / 過鏡心）</span>
+    <span><i class="sw" style="background:var(--gray);"></i>過己方焦點→折射後平行</span>
+    <span><i class="sw" style="background:var(--green);"></i>成像</span>
+    <span><i class="sw" style="background:none;border-top:2px dashed var(--amber);"></i>虛像延長線</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const axisY = H/2;
+const lensX = W/2;
+const objHeightBase = 90; // object arrow height in px, scaled with zoom below
+const MAX_DO_F = 30;      // slider's far end ≈ 30f, close enough to "infinity" to show rays going parallel
+
+const slider = document.getElementById('slider');
+const zoomSlider = document.getElementById('zoomSlider');
+const infBtn = document.getElementById('infBtn');
+const twoFBtn = document.getElementById('twoFBtn');
+const doLabel = document.getElementById('doLabel');
+const doVal = document.getElementById('doVal');
+const diVal = document.getElementById('diVal');
+const typeVal = document.getElementById('typeVal');
+const mVal = document.getElementById('mVal');
+const convexBtn = document.getElementById('lensConvexBtn');
+const concaveBtn = document.getElementById('lensConcaveBtn');
+const mirrorConcaveBtn = document.getElementById('mirrorConcaveBtn');
+const mirrorConvexBtn = document.getElementById('mirrorConvexBtn');
+
+let deviceType = 'lens-convex'; // 'lens-convex' | 'lens-concave' | 'mirror-concave' | 'mirror-convex'
+let lastDiF = null;      // previous frame's image distance (in f), to detect crossing 2f
+let flashUntil = 0;      // timestamp until which the image arrow should flash red
+let flashTimerSet = false;
+
+// slider -> do (in units of f): quadratic curve so low values (near f, near 2f,
+// where the interesting real/virtual switch happens) get more resolution,
+// while the far end of the slider still reaches ~40f to approximate "very far away".
+function sliderToDoF(v){
+  const t = v/1000;
+  return 0.15 + t*t*(MAX_DO_F-0.15);
+}
+// inverse of sliderToDoF: what slider value gives a particular do (in units of f)
+function doFToSlider(doF){
+  const t = Math.sqrt((doF-0.15)/(MAX_DO_F-0.15));
+  return Math.round(t*1000);
+}
+
+function draw(){
+  const reflective = deviceType.startsWith('mirror');
+  const convergent = deviceType === 'lens-convex' || deviceType === 'mirror-concave';
+  const fx = x => reflective ? (2*lensX - x) : x; // fold outgoing rays back for mirrors
+
+  const pxPerF = Number(zoomSlider.value); // px per unit-f — smaller = more zoomed out
+  const objHeight = Math.max(40, objHeightBase * (pxPerF/90));
+  const doF = sliderToDoF(Number(slider.value)); // object distance in units of f
+  const doPx = doF * pxPerF;
+  const objX = lensX - doPx;
+
+  // lens/mirror formula: 1/f = 1/do + 1/di (same numeric form; mirrors are handled
+  // by computing as if "transmitted" then folding the outgoing side back — see fx())
+  let diF, real;
+  if (convergent){
+    if (Math.abs(doF-1) < 0.02){
+      diF = 999; real = true; // near infinity
+    } else {
+      diF = (doF*1)/(doF-1); // in units of f
+      real = diF > 0;
+    }
+  } else {
+    // diverging device: f = -1 in these units -> always virtual, reduced, upright
+    diF = -doF/(doF+1);
+    real = false;
+  }
+  const diPx = diF * pxPerF;
+  const imgX = lensX + diPx;
+
+  // detect the (real-side) image crossing the 2f mark -> flash red for 0.2s (convergent only)
+  if (convergent && lastDiF !== null && real && lastDiF > 0 && (lastDiF-2)*(diF-2) <= 0 && lastDiF !== diF){
+    flashUntil = Date.now() + 200;
+  }
+  lastDiF = diF;
+  const flashing = Date.now() < flashUntil;
+  const imgColor = flashing ? '#ff3b3b' : '#39ff8f';
+  if (flashing && !flashTimerSet){
+    flashTimerSet = true;
+    setTimeout(() => { flashTimerSet = false; draw(); }, 210);
+  }
+
+  ctx.clearRect(0,0,W,H);
+
+  // axis
+  ctx.strokeStyle = 'rgba(143,208,214,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(20,axisY); ctx.lineTo(W-20,axisY);
+  ctx.stroke();
+
+  // side labels
+  ctx.fillStyle = '#8fb3ae';
+  ctx.font = '13px -apple-system,sans-serif';
+  ctx.fillText(reflective ? '鏡前・物側 / 實像區' : '虛像側 (Virtual)', 30, 30);
+  ctx.textAlign = 'right';
+  ctx.fillText(reflective ? '鏡後（虛像區）' : '實像側 (Real)', W-30, 30);
+  ctx.textAlign = 'left';
+
+  // focal + 2f markers both sides
+  function tick(x,label){
+    ctx.strokeStyle = 'rgba(143,208,214,0.4)';
+    ctx.beginPath(); ctx.moveTo(x,axisY-6); ctx.lineTo(x,axisY+6); ctx.stroke();
+    ctx.fillStyle = '#8fb3ae';
+    ctx.font = '33px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, x, axisY+38);
+  }
+  tick(lensX - pxPerF, "f'");
+  tick(lensX - 2*pxPerF, "2f'");
+  tick(lensX + pxPerF, "f");
+  tick(lensX + 2*pxPerF, "2f");
+  ctx.textAlign = 'left';
+
+  // device icon: lens (ellipse/hourglass, light passes through) or mirror (curved surface + back hatching)
+  ctx.strokeStyle = '#8fd0d6';
+  ctx.lineWidth = 2;
+  if (!reflective){
+    if (convergent){
+      ctx.beginPath();
+      ctx.ellipse(lensX, axisY, 16, 90, 0, 0, Math.PI*2);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(lensX-14, axisY-90);
+      ctx.quadraticCurveTo(lensX-3, axisY, lensX-14, axisY+90);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(lensX+14, axisY-90);
+      ctx.quadraticCurveTo(lensX+3, axisY, lensX+14, axisY+90);
+      ctx.stroke();
+    }
+  } else {
+    const curveDir = convergent ? 1 : -1; // concave mirror bulges away from object, convex bulges toward it
+    ctx.beginPath();
+    ctx.moveTo(lensX, axisY-90);
+    ctx.quadraticCurveTo(lensX+curveDir*22, axisY, lensX, axisY+90);
+    ctx.stroke();
+    // back-side hatching to mark the silvered (reflective) surface
+    ctx.strokeStyle = 'rgba(143,208,214,0.6)';
+    ctx.lineWidth = 1.4;
+    for (let y=axisY-78; y<=axisY+78; y+=22){
+      const t = (y-(axisY-90))/180;
+      const curveX = lensX + curveDir*22*4*t*(1-t)*1.0; // rough x along the quadratic at this y
+      ctx.beginPath();
+      ctx.moveTo(curveX + curveDir*4, y-8);
+      ctx.lineTo(curveX + curveDir*14, y+8);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#8fd0d6';
+  }
+
+  // object arrow
+  ctx.strokeStyle = '#f2ead8';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(objX, axisY);
+  ctx.lineTo(objX, axisY - objHeight);
+  ctx.stroke();
+  arrowHead(objX, axisY-objHeight, 0, -1, '#f2ead8');
+
+  const tipY = axisY - objHeight;
+
+  // Ray 1: parallel to axis -> through far focal point (primary ray)
+  ctx.strokeStyle = '#e3a75a';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(objX, tipY);
+  ctx.lineTo(lensX, tipY);
+  ctx.stroke();
+
+  // Ray 2: through center, undeviated (primary ray)
+  ctx.beginPath();
+  ctx.moveTo(objX, tipY);
+  ctx.lineTo(lensX, axisY);
+  ctx.stroke();
+
+  // Ray 3: aimed at a focal point before the lens, emerges parallel after (secondary ray, muted gray)
+  const nearF = lensX - pxPerF;
+  const farF = lensX + pxPerF;
+  const target3X = convergent ? nearF : farF; // convex/concave-mirror aims at near focal pt, others at far
+  const slope3 = (axisY - tipY) / (target3X - objX);
+  const yAtLens3 = tipY + slope3*(lensX-objX);
+  ctx.strokeStyle = '#8a9a97';
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(objX, tipY);
+  ctx.lineTo(lensX, yAtLens3);
+  ctx.stroke();
+
+  // magnification (sign convention: m = -di/do)
+  const mag = -diF/doF;
+  const finalImgY = axisY + (tipY-axisY)*mag;
+
+  // slopes of the three rays AFTER refraction at the lens
+  const target1X = convergent ? farF : nearF; // convergent devices bend toward far focal pt, diverging appear to diverge from near focal pt
+  const slopeRay1After = (axisY - tipY) / (target1X - lensX);
+  const slopeRay2After = (axisY - tipY) / (lensX - objX);   // undeviated, same slope as incoming
+  const slopeRay3After = 0;                                  // now parallel to axis
+
+  function extendRay(y0, slope, toX){
+    const endY = y0 + slope*(toX-lensX);
+    ctx.beginPath();
+    ctx.moveTo(fx(lensX), y0);
+    ctx.lineTo(fx(toX), endY);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#e3a75a';
+  ctx.lineWidth = 1.8;
+  extendRay(tipY, slopeRay1After, W-30);
+  extendRay(axisY, slopeRay2After, W-30);
+  ctx.strokeStyle = '#8a9a97';
+  ctx.lineWidth = 1.3;
+  extendRay(yAtLens3, slopeRay3After, W-30);
+
+  const imgXDrawn = fx(imgX);
+
+  if (real){
+    // image arrow (real, inverted, solid, neon green — flashes red when crossing 2f)
+    ctx.strokeStyle = imgColor;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(imgXDrawn, axisY);
+    ctx.lineTo(imgXDrawn, finalImgY);
+    ctx.stroke();
+    arrowHead(imgXDrawn, finalImgY, 0, finalImgY>axisY?1:-1, imgColor);
+  } else {
+    // dashed backward extensions of the three refracted rays, meeting at the virtual image
+    ctx.setLineDash([5,5]);
+    ctx.strokeStyle = '#e3a75a';
+    ctx.lineWidth = 1.4;
+    extendRay(tipY, slopeRay1After, imgX);
+    extendRay(axisY, slopeRay2After, imgX);
+    ctx.strokeStyle = '#8a9a97';
+    extendRay(yAtLens3, slopeRay3After, imgX);
+    ctx.setLineDash([]);
+
+    // virtual image arrow (upright, dashed, neon green)
+    ctx.strokeStyle = imgColor;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([4,4]);
+    ctx.beginPath();
+    ctx.moveTo(imgXDrawn, axisY);
+    ctx.lineTo(imgXDrawn, finalImgY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    arrowHead(imgXDrawn, finalImgY, 0, finalImgY>axisY?1:-1, imgColor);
+  }
+
+  // labels
+  const farNote = doF > 15 ? '（≈極遠，近似平行光）' : '';
+  doLabel.textContent = `do = ${doF.toFixed(2)}f`;
+  doVal.textContent = `${doF.toFixed(2)} f${farNote}`;
+  diVal.textContent = `${Math.abs(diF).toFixed(2)} f${real?'':' (虛)'}${doF>15?'（趨近 1f）':''}`;
+  const size = Math.abs(mag) > 1.02 ? '放大' : (Math.abs(mag) < 0.98 ? '縮小' : '等大');
+  typeVal.textContent = real
+    ? `實像・倒立・${size}`
+    : `虛像・正立・${size}`;
+  typeVal.className = 'v ' + (real ? 'real' : 'virtual');
+  mVal.textContent = `${Math.abs(mag).toFixed(2)}×`;
+}
+
+function arrowHead(x,y,dx,dy,color){
+  const size=8;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.lineTo(x-size*0.6, y - dy*size);
+  ctx.lineTo(x+size*0.6, y - dy*size);
+  ctx.closePath();
+  ctx.fill();
+}
+
+slider.addEventListener('input', draw);
+zoomSlider.addEventListener('input', draw);
+infBtn.addEventListener('click', () => { slider.value = 1000; draw(); });
+twoFBtn.addEventListener('click', () => { slider.value = doFToSlider(2); draw(); });
+
+function setDeviceType(type){
+  deviceType = type;
+  const convergent = type === 'lens-convex' || type === 'mirror-concave';
+  convexBtn.classList.toggle('active', type === 'lens-convex');
+  concaveBtn.classList.toggle('active', type === 'lens-concave');
+  mirrorConcaveBtn.classList.toggle('active', type === 'mirror-concave');
+  mirrorConvexBtn.classList.toggle('active', type === 'mirror-convex');
+  infBtn.style.display = convergent ? '' : 'none';
+  twoFBtn.style.display = convergent ? '' : 'none';
+  lastDiF = null; // avoid a false flash trigger from the discontinuity when switching types
+  draw();
+}
+convexBtn.addEventListener('click', () => setDeviceType('lens-convex'));
+concaveBtn.addEventListener('click', () => setDeviceType('lens-concave'));
+mirrorConcaveBtn.addEventListener('click', () => setDeviceType('mirror-concave'));
+mirrorConvexBtn.addEventListener('click', () => setDeviceType('mirror-convex'));
+
+draw();
+</script>
+</body>
+</html>
