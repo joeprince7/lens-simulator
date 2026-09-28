@@ -109,20 +109,25 @@
   }
   .legend span{display:flex;align-items:center;gap:6px;}
   .sw{width:16px;height:2px;display:inline-block;}
+  .layout{
+    display:flex;
+    align-items:flex-start;
+    gap:18px;
+    width:100%;
+    max-width:960px;
+  }
+  .layout .stage{flex:1;min-width:0;}
   .lensToggle{
-    display:grid;
-    grid-template-columns:auto 1fr 2px 1fr;
-    align-items:center;
-    gap:10px 8px;
-    column-gap:14px;
-    margin-bottom:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    width:170px;
+    flex-shrink:0;
   }
   .lensToggle .divider{
-    grid-column:3;
-    grid-row:1 / span 3;
-    align-self:stretch;
-    border-left:2px dashed var(--dim);
+    border-top:2px dashed var(--dim);
     opacity:0.7;
+    margin:8px 0 4px;
   }
   .lensToggle .colHead{
     text-align:center;
@@ -131,10 +136,9 @@
     font-weight:600;
     letter-spacing:2px;
   }
-  .lensToggle .groupLabel{
-    color:var(--dim);
-    font-size:12px;
-    width:38px;
+  @media (max-width:720px){
+    .layout{flex-direction:column;align-items:stretch;}
+    .lensToggle{width:100%;}
   }
   .lensToggle button{
     background:rgba(255,255,255,0.04);
@@ -166,16 +170,14 @@
 <h1>透鏡／面鏡成像模擬器</h1>
 <div class="sub">拖動下方滑桿改變物體位置，即時看到成像變化</div>
 
+<div class="layout">
 <div class="lensToggle">
-  <span class="divider"></span>
-  <span></span>
-  <span class="colHead">複雜</span>
-  <span class="colHead">簡單</span>
-  <span class="groupLabel">透鏡</span>
+  <div class="colHead">複雜</div>
   <button id="lensConvexBtn" class="active">凸透鏡（會聚）<small class="ex">例：放大鏡</small></button>
-  <button id="lensConcaveBtn">凹透鏡（發散）<small class="ex">例：近視眼鏡</small></button>
-  <span class="groupLabel">面鏡</span>
   <button id="mirrorConcaveBtn">凹面鏡（會聚）<small class="ex">例：化妝鏡</small></button>
+  <div class="divider"></div>
+  <div class="colHead">簡單</div>
+  <button id="lensConcaveBtn">凹透鏡（發散）<small class="ex">例：近視眼鏡</small></button>
   <button id="mirrorConvexBtn">凸面鏡（發散）<small class="ex">例：巷口大反光鏡</small></button>
 </div>
 
@@ -222,6 +224,7 @@
     <span><i class="sw" style="background:var(--green);"></i>成像</span>
     <span><i class="sw" style="background:none;border-top:2px dashed var(--amber);"></i>虛像延長線</span>
   </div>
+</div>
 </div>
 
 <script>
